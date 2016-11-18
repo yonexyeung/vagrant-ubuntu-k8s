@@ -140,14 +140,45 @@ hello-deployment   3         3         3            0           12s
 available count should go to the value `3`*.
 
 ### Accessing the Service
-The IP address for the service can be seen via the `kubectl get service`
-command, but also can be retrieved from the Kubernetes DNS server. Below is
-an example `dig` command to get the IP address of the service.
-
+Kubernetes creates a SRV record in its DNS server for the service that was
+defined in the `service.yml` file. Looking at this file you can see that a
+service named `http` was defined. This information can be queried from DNS
+use the following command:
 ```
-ubuntu@k8s1:~$ dig @100.64.0.10 +short hello-service.default.svc.cluster.local
+ubuntu@k8s1:~$ dig +short  @100.64.0.10 _http._tcp.hello-service.default.svc.cluster.local SRV
+10 100 80 hello-service.default.svc.cluster.local.
+```
+
+The information returned form this query is of the form:
+```
+<priority> <weight> <port> <target>
+```
+
+Using a query recursively on this information, specifically the `target` the
+IP address for the service can be retrieved.
+```
+ubuntu@k8s1:~$ dig +short  @100.64.0.10 hello-service.default.svc.cluster.local.
 100.76.247.60
 ```
+
+Thus using DNS a client can dynamically determine the IP address and the port
+on which to connect to a service. To test the service the following command
+can be used on any node in the cluster:
+```
+curl -sSL http://$(dig +short @100.64.0.10 $(dig +short  @100.64.0.10 \
+     _http._tcp.hello-service.default.svc.cluster.local SRV | cut '-d ' -f4)):\
+     $(dig +short @100.64.0.10 _http._tcp.hello-service.default.svc.cluster.local SRV | cut '-d ' -f3)
+```
+
+A script has been provided to simplify this tasks and returns the host IP and the
+port given a DNS server and service. Thus the same results can be acheived in
+the playground with the following command:
+```
+curl -sSL http://$(/vagrant/kube-target 100.64.0.10 _http._tcp.hello-service.default.svc.cluster.local)
+```
+
+The IP address for the service can also be seen via the `kubectl get service`
+command.
 
 The IP address returned in every enivornment may be differet.
 
@@ -155,7 +186,7 @@ To test the service you can use the following command on any node in the
 cluster:
 
 ```
-ubuntu@k8s1:~$ curl -sSL http://$(dig @100.64.0.10 +short hello-service.default.svc.cluster.local)
+ubuntu@k8s1:~$ curl -sSL http://$(/vagrant/kube-target 100.64.0.10 _http._tcp.hello-service.default.svc.cluster.local)
 Hello, "/"
 HOST: hello-deployment-2911225940-b3tyn
 ADDRESSES:
@@ -174,7 +205,7 @@ previous request. This demonstates that the request is being handled by
 different services.
 
 ```
-watch -d curl -sSL http://$(dig  @100.64.0.10 +short hello-service.default.svc.cluster.local)
+watch -d curl -sSL http://$(/vagrant/kube-target 100.64.0.10 _http._tcp.hello-service.default.svc.cluster.local)
 ```
 
 Currently there should be 3 instances of the service implementation being
@@ -225,8 +256,7 @@ To cause one of the container instances to start reporting a failed health
 value you can set a random instance to fail using
 
 ```
-curl -XPOST -sSL http://$(dig @100.64.0.10 +short \
-     hello-service.default.svc.cluster.local)/health -d '{"status":501}'
+curl -XPOST -sSL http://$(/vagrant/kube-target 100.64.0.10 _http._tcp.hello-service.default.svc.cluster.local)/health -d '{"status":501}'
 ```
 
 This will set the health check on a random instance in the cluster to return
