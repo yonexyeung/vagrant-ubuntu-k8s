@@ -3,12 +3,12 @@
 DNS=$1
 SRV=$2
 
-INFO=$(dig +short ${DNS} $SRV SRV)
+INFO=$(dig +short @${DNS} $SRV SRV)
 if [ "$INFO X" == " X" ]; then
     >&2 echo "Unable to resolve service"
     exit 1
 fi
 
-HOST=$(dig +short @10.32.0.2 $(echo $INFO | cut '-d ' -f4))
+HOST=$(dig +short @${DNS} $(echo $INFO | cut '-d ' -f4))
 PORT=$(echo $INFO | cut '-d ' -f3)
 echo $HOST:$PORT
