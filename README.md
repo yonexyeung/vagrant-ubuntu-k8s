@@ -271,6 +271,57 @@ restarting a pod because of a failed health check.
 
 *NOTE: the frequency of health checks is configurable*
 
+### Example client
+Included in the repo is an example client written in the Go language that
+demonstrates how a container can directly look up another service and call
+that service.
+
+To test this client use the following steps:
+
+| COMMAND | DESCRIPTION |
+| --- | --- |
+| `vagrant ssh k8s1` | Logon to the k8s1 host |
+| `cd /vagrant/examples/client/go` | Move to the example directory |
+| `sudo apt-get -y install make` | Install the `make` command |
+| `make prep` | Enables deployment of pods to the master node, `k8s1` |
+| `make image` | Builds the sample client Docker image |
+| `make run` | Runs the sample client as a run-once pod |
+| `make logs` | Displays the logs for the client pod |
+| `make clean` | Deletes the sample client pod |
+
+The output of the `make logs` step should display a similar output as the `curl`
+statement above.
+
+```
+ubuntu@k8s1:/vagrant/examples/client/go$ make logs
+kubectl logs hello-client
+Hello, "/"
+HOST: hello-deployment-1725651635-u8f65
+ADDRESSES:
+    127.0.0.1/8
+    10.40.0.1/12
+    ::1/128
+    fe80::bcdc:21ff:fecd:83db/64
+```
+
+The above example forces the deployment of the sample client to the k8s1 node
+for simplicity. If you would like to have the client deployed to any of the
+nodes in the cluster you need to `ssh` to each node in the cluster and
+
+```
+cd /vagrant/examples/client/go
+sudo apt-get install -y make
+make image
+```
+
+The run the sample client use the following commands
+
+```
+vagrant ssh k8s1
+kubectl delete po hello-client
+kubectl run hello-client --image=hello-client --image-pull-policy=Never --restart=Never 
+```
+
 ### Clean Up
 On each vagrant machine is installed a utility as `/usr/local/bin/clean-k8s`.
 executing this script as `sudo` will reset the servers back to a point where
