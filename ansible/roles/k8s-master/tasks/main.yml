@@ -5,6 +5,42 @@
   tags:
     - k8s
 
+- name: Copy config to /Vagrant for other VMs
+  become: yes
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /vagrant/admin.conf
+    owner: ubuntu
+    group: ubuntu
+    mode: 0600
+
+- name: Copy config to home directory
+  become: yes
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ubuntu/admin.conf
+    owner: ubuntu
+    group: ubuntu
+    mode: 0600
+
+- name: Update Environment
+  become: yes
+  lineinfile:
+    path: /home/ubuntu/.bashrc
+    regexp: '^export KUBECONFIG='
+    line: 'export KUBECONFIG=/home/ubuntu/admin.conf'
+    state: present
+
+- name: Set --proxy-mode flag in kube-proxy daemonset (workaround for https://github.com/kubernetes/kubernetes/issues/34101)
+  become: yes
+  shell: "kubectl --kubeconfig=/home/ubuntu/admin.conf -n kube-system get ds -l 'k8s-app==kube-proxy' -o json | jq '.items[0].spec.template.spec.containers[0].command |= .+ [\"--proxy-mode=userspace\"]' | kubectl --kubeconfig=/home/ubuntu/admin.conf apply -f - && kubectl --kubeconfig=/home/ubuntu/admin.conf -n kube-system delete pods -l 'k8s-app==kube-proxy'"
+  register: proxy
+  until: proxy.rc == 0
+  retries: 60
+  delay: 10
+  tags:
+    - k8s
+
 - name: Ensure Network Start Script
   become: yes
   copy:
@@ -17,30 +53,3 @@
     - "start-weave"
     - "start-calico"
     - "start-canal"
-
-#- name: Ensure jq package is installed
-#  become: yes
-#  apt:
-#    name: "{{ item }}"
-#    state: latest
-#  with_items:
-#    - jq
-#  tags:
-#    - k8s
-
-#
-#- name: Set --advertise-address flag in kube-apiserver static pod manifest (workaround for https://github.com/kubernetes/kubernetes/issues/34101)
-#  become: yes
-#  shell: "jq '.spec.containers[0].command |= .+ [\"--advertise-address=172.42.42.1\"]' /etc/kubernetes/manifests/kube-apiserver.json > /tmp/kube-apiserver.json && mv /tmp/kube-apiserver.json /etc/kubernetes/manifests/kube-apiserver.json"
-#  tags:
-#    - k8s
-#
-#- name: Set --proxy-mode flag in kube-proxy daemonset (workaround for https://github.com/kubernetes/kubernetes/issues/34101)
-#  become: yes
-#  shell: "kubectl -n kube-system get ds -l 'component=kube-proxy' -o json | jq '.items[0].spec.template.spec.containers[0].command |= .+ [\"--proxy-mode=userspace\"]' | kubectl apply -f - && kubectl -n kube-system delete pods -l 'component=kube-proxy'"
-#  register: proxy
-#  until: proxy.rc == 0
-#  retries: 20
-#  delay: 10
-#  tags:
-#    - k8s

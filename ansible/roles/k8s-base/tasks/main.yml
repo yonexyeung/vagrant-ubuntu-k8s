@@ -68,13 +68,26 @@
     name: "{{ item }}"
     state: latest
   with_items:
-    - docker.io
+    - apt-transport-https
+    - docker-engine
     - kubelet
     - kubeadm
     - kubectl
     - kubernetes-cni
+    - jq
   tags:
     - k8s
+
+- name: Ensure Docker Group
+  group:
+    name: docker
+    state: present
+
+- name: Ensure User in Docker Group
+  user:
+    name=ubuntu
+    groups=docker
+    append=yes
 
 - name: Ensure Kubernetes Cleanup
   become:

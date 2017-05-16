@@ -1,7 +1,12 @@
 #!/bin/bash
 
-DNS=$1
-SRV=$2
+if [ $# -eq 2 ]; then
+  DNS=$1
+  SRV=$2
+else
+  DNS=$(kubectl -n kube-system get svc -l k8s-app==kube-dns -o json | jq -r '.items[].spec.clusterIP')
+  SRV=$1
+fi
 
 INFO=$(dig +short @${DNS} $SRV SRV)
 if [ "$INFO X" == " X" ]; then
