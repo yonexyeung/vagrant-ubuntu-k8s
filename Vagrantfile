@@ -3,7 +3,7 @@
 
 Vagrant.configure(2) do |config|
 
-  (1..3).each do |i|
+  (1..2).each do |i|
     config.vm.define "k8s#{i}" do |s|
       s.ssh.forward_agent = true
       s.vm.box = "ubuntu/xenial64"
