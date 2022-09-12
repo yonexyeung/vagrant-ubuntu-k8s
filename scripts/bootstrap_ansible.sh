@@ -17,9 +17,16 @@
 
 set -e
 
+export DEBIAN_FRONTEND=noninteractive
 echo "Installing Ansible..."
-apt-get update -y
-apt-get install -y software-properties-common
-apt-add-repository ppa:ansible/ansible
-apt-get update
-apt-get install -y ansible apt-transport-https
+#apt-get update -y
+#apt-get install -y software-properties-common
+#apt-add-repository ppa:ansible/ansible
+#apt-get update
+#apt-get install -y ansible apt-transport-https
+#ansible-galaxy collection install ansible.posix
+
+apt update -y 
+apt upgrade -y 
+apt install ansible apt-transport-https -y
+ansible-galaxy collection install ansible.posix

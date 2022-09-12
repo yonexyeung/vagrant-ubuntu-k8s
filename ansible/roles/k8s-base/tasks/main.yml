@@ -65,19 +65,17 @@
 - name: Ensure Base Kubernetes
   become: yes
   apt:
-    name: "{{ item }}"
     state: latest
-  with_items:
-    - apt-transport-https
-    - docker-engine
-    - containerd
-    - kubelet
-    - kubeadm
-    - kubectl
-    - kubernetes-cni
-    - jq
-  tags:
-    - k8s
+    pkg:
+      - apt-transport-https
+      - curl
+      - docker.io
+      - containerd
+      - kubelet
+      - kubeadm
+      - kubectl
+      - kubernetes-cni
+      - jq
 
 - name: Ensure Docker Group
   group:
